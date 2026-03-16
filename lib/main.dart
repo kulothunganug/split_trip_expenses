@@ -7,7 +7,6 @@ import 'providers/trips_provider.dart';
 import 'providers/trip_provider.dart';
 import 'services/import_export_service.dart';
 import 'screens/home_screen.dart';
-import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,8 +36,10 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       title: 'Trip Expense Manager',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
       themeMode: appProvider.themeMode,
       home: const HomeScreen(),
     );
