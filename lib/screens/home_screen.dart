@@ -79,9 +79,9 @@ class HomeScreen extends StatelessWidget {
               itemCount: tripsProvider.trips.length,
               itemBuilder: (context, index) {
                 final trip = tripsProvider.trips[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                return Card(
                   child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -90,36 +90,10 @@ class HomeScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    borderRadius: BorderRadius.circular(24),
                     child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.cardTheme.color,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.shadowColor.withAlpha(50),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
                       padding: const EdgeInsets.all(20),
                       child: Row(
                         children: [
-                          Container(
-                            height: 60,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Icon(
-                              Icons.flight_takeoff,
-                              color: theme.colorScheme.onPrimaryContainer,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,17 +171,6 @@ class HomeScreen extends StatelessWidget {
           Text(
             'Create your first trip to start tracking expenses!',
             style: TextStyle(color: Theme.of(context).disabledColor),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => const CreateTripDialog(),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Create Trip'),
           ),
         ],
       ),

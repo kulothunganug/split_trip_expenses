@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:drift/drift.dart' as drift;
@@ -33,31 +34,36 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
       _titleController.text = widget.expense!.title;
       _amountController.text = widget.expense!.amount.toString();
       _selectedDate = widget.expense!.datetime;
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         final tripProv = context.read<TripProvider>();
         final catProv = context.read<CategoriesProvider>();
-        
+
         setState(() {
           if (widget.expense!.categoryId != null) {
             try {
               _selectedCategory = catProv.categories.firstWhere(
-                  (c) => c.id == widget.expense!.categoryId);
+                (c) => c.id == widget.expense!.categoryId,
+              );
             } catch (_) {}
           }
           try {
             _paidBy = tripProv.members.firstWhere(
-                (m) => m.id == widget.expense!.memberId);
+              (m) => m.id == widget.expense!.memberId,
+            );
           } catch (_) {}
         });
 
-        final participants = await tripProv.db.getExpenseParticipants(widget.expense!.id);
+        final participants = await tripProv.db.getExpenseParticipants(
+          widget.expense!.id,
+        );
         if (!mounted) return;
-        
+
         setState(() {
           _selectedMemberIds = participants.map((p) => p.memberId).toSet();
-          if (_selectedMemberIds.length == tripProv.members.length && tripProv.members.isNotEmpty) {
+          if (_selectedMemberIds.length == tripProv.members.length &&
+              tripProv.members.isNotEmpty) {
             _splitMode = 'Everyone';
           } else {
             _splitMode = 'Selected';
@@ -262,6 +268,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: const InputDecoration(
                     labelText: 'Amount (₹)',
                     prefixIcon: Icon(Icons.currency_rupee),

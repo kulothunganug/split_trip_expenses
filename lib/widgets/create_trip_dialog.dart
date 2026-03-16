@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../database/drift_database.dart';
 import '../providers/trips_provider.dart';
@@ -45,10 +46,7 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
         }
       }
     } else {
-      _memberFields.addAll([
-        _MemberField(controller: TextEditingController(text: 'Me')),
-        _MemberField(controller: TextEditingController()),
-      ]);
+      _memberFields.addAll([_MemberField(controller: TextEditingController())]);
     }
   }
 
@@ -150,7 +148,6 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -162,10 +159,7 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
               children: [
                 Text(
                   _isEdit ? 'Edit Trip' : 'Let\'s Start a Trip',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -174,7 +168,7 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Trip Title (e.g. Goa Trip)',
+                    labelText: 'Trip Title',
                     prefixIcon: Icon(Icons.flight_takeoff),
                   ),
                   validator: (v) =>
@@ -188,6 +182,7 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: const InputDecoration(
                     labelText: 'Total Budget (Optional)',
                     prefixIcon: Icon(Icons.account_balance_wallet_outlined),
