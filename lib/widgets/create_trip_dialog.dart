@@ -7,7 +7,9 @@ import '../providers/trips_provider.dart';
 class _MemberField {
   Member? member;
   TextEditingController controller;
-  _MemberField({this.member, required this.controller});
+  FocusNode focusNode;
+  _MemberField({this.member, required this.controller})
+      : focusNode = FocusNode();
 }
 
 class CreateTripDialog extends StatefulWidget {
@@ -56,13 +58,18 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
     _budgetController.dispose();
     for (var f in _memberFields) {
       f.controller.dispose();
+      f.focusNode.dispose();
     }
     super.dispose();
   }
 
   void _addMemberField() {
+    final field = _MemberField(controller: TextEditingController());
     setState(() {
-      _memberFields.add(_MemberField(controller: TextEditingController()));
+      _memberFields.add(field);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      field.focusNode.requestFocus();
     });
   }
 
@@ -141,130 +148,112 @@ class _CreateTripDialogState extends State<CreateTripDialog> {
     }
 
     if (mounted) {
-      Navigator.pop(context, true); // true indicates success
+      Navigator.pop(context, true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  _isEdit ? 'Edit Trip' : 'Let\'s Start a Trip',
-                  style: Theme.of(context).textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                // Title Field
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Trip Title',
-                    prefixIcon: Icon(Icons.flight_takeoff),
-                  ),
-                  validator: (v) =>
-                      v!.trim().isEmpty ? 'Please enter title' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Optional Budget
-                TextFormField(
-                  controller: _budgetController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Total Budget (Optional)',
-                    prefixIcon: Icon(Icons.account_balance_wallet_outlined),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Members Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Members',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+    return Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(_isEdit ? 'Edit Trip' : 'New Trip'),
+          actions: [
+            TextButton(
+              onPressed: _saveTrip,
+              child: Text(_isEdit ? 'Save' : 'Create'),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Trip Title',
+                      prefixIcon: Icon(Icons.flight_takeoff),
                     ),
-                    TextButton.icon(
-                      onPressed: _addMemberField,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                    validator: (v) =>
+                        v!.trim().isEmpty ? 'Please enter title' : null,
+                  ),
+                  const SizedBox(height: 16),
 
-                ...List.generate(_memberFields.length, (index) {
-                  final field = _memberFields[index];
-                  final isExisting = field.member != null;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: field.controller,
-                            decoration: InputDecoration(
-                              labelText: 'Member ${index + 1}',
-                              prefixIcon: const Icon(Icons.person_outline),
-                            ),
-                          ),
+                  TextFormField(
+                    controller: _budgetController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Total Budget (Optional)',
+                      prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Members',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        if (_memberFields.length > 1 && !isExisting) ...[
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () => _removeMemberField(index),
-                            icon: const Icon(
-                              Icons.remove_circle_outline,
-                              color: Colors.red,
+                      ),
+                      TextButton.icon(
+                        onPressed: _addMemberField,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  ...List.generate(_memberFields.length, (index) {
+                    final field = _memberFields[index];
+                    final isExisting = field.member != null;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: field.controller,
+                              focusNode: field.focusNode,
+                              decoration: InputDecoration(
+                                labelText: 'Member ${index + 1}',
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
                             ),
                           ),
+                          if (_memberFields.length > 1 && !isExisting) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => _removeMemberField(index),
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: 24),
-
-                // Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('Cancel'),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _saveTrip,
-                        child: Text(_isEdit ? 'Save' : 'Create'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ),

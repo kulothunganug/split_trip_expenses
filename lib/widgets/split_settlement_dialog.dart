@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/trip_provider.dart';
 import '../providers/app_provider.dart';
 
@@ -40,9 +41,25 @@ class SplitSettlementDialog extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Settlement Summary',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Text(
+                  'Settlement Summary',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    tooltip: 'Share summary',
+                    onPressed: () => _shareSummary(context, result, appProv.currency),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           const Text('How to settle all debts with minimum transactions:'),
@@ -127,6 +144,20 @@ class SplitSettlementDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _shareSummary(BuildContext context, dynamic result, String currency) {
+    final tripProv = context.read<TripProvider>();
+    final tripName = tripProv.trip?.title ?? 'Trip';
+    final lines = StringBuffer();
+    lines.writeln('Settlement Summary — $tripName');
+    lines.writeln();
+    for (final t in result.transactions) {
+      lines.writeln('${t.from.name} owes ${t.to.name}  $currency${t.amount.toStringAsFixed(2)}');
+    }
+    lines.writeln();
+    lines.write('Minimum transactions to settle all debts.');
+    Share.share(lines.toString());
   }
 
   Widget _buildEmptyState(BuildContext context, String message) {

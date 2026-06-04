@@ -24,7 +24,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
   Member? _paidBy;
   DateTime _selectedDate = DateTime.now();
 
-  String _splitMode = 'Everyone'; // 'Everyone' or 'Selected'
+  String _splitMode = 'Everyone';
   Set<int> _selectedMemberIds = {};
 
   @override
@@ -72,7 +72,6 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
       });
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Pre-select first category and first member
         final tripProv = context.read<TripProvider>();
         final catProv = context.read<CategoriesProvider>();
         if (tripProv.members.isNotEmpty) {
@@ -100,7 +99,22 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (date != null) {
-      setState(() => _selectedDate = date);
+      if (!mounted) return;
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDate),
+      );
+      if (time != null) {
+        setState(() {
+          _selectedDate = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            time.hour,
+            time.minute,
+          );
+        });
+      }
     }
   }
 
@@ -146,7 +160,6 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
     if (widget.expense == null) {
       await tripProv.addExpense(expenseCompanion, participantIds);
     } else {
-      // update -> need the raw Expense object modified
       final updated = widget.expense!.copyWith(
         memberId: _paidBy!.id,
         categoryId: drift.Value(_selectedCategory!.id),
@@ -168,225 +181,209 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
     final categories = catProv.categories;
     final theme = Theme.of(context);
 
-    // Filter to ensure selected category/member exist in drops
     if (_paidBy != null && !members.contains(_paidBy)) _paidBy = null;
     if (_selectedCategory != null && !categories.contains(_selectedCategory))
       _selectedCategory = null;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  widget.expense == null ? 'Add Expense' : 'Edit Expense',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 24,
+        right: 24,
+        top: 12,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(height: 24),
+              ),
+            ),
 
-                // Category & Date Row
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<Category>(
-                        value: _selectedCategory,
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: categories
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c,
-                                child: Row(
-                                  children: [
-                                    Text(c.emoji),
-                                    const SizedBox(width: 8),
-                                    Text(c.title),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(() => _selectedCategory = v),
+            Text(
+              widget.expense == null ? 'Add Expense' : 'Edit Expense',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<Category>(
+                    value: _selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Date',
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                    items: categories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c,
+                            child: Row(
+                              children: [
+                                Text(c.emoji),
+                                const SizedBox(width: 8),
+                                Text(c.title),
+                              ],
                             ),
                           ),
-                          child: Text(
-                            DateFormat('MMM d').format(_selectedDate),
-                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategory = v),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 1,
+                  child: InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(16),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Title
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'What was it for?',
-                    prefixIcon: Icon(Icons.receipt_long),
-                  ),
-                  validator: (v) =>
-                      v!.trim().isEmpty ? 'Enter a description' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Amount
-                TextFormField(
-                  controller: _amountController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Amount (₹)',
-                    prefixIcon: Icon(Icons.currency_rupee),
-                  ),
-                  validator: (v) => v!.trim().isEmpty ? 'Enter amount' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Paid By
-                DropdownButtonFormField<Member>(
-                  value: _paidBy,
-                  decoration: const InputDecoration(
-                    labelText: 'Paid By',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  items: members
-                      .map(
-                        (m) => DropdownMenuItem(value: m, child: Text(m.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _paidBy = v),
-                ),
-                const SizedBox(height: 24),
-
-                // Split Mode
-                const Text(
-                  'Split among',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Everyone'),
-                        value: 'Everyone',
-                        groupValue: _splitMode,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) {
-                          setState(() {
-                            _splitMode = v!;
-                            _selectedMemberIds.clear();
-                          });
-                        },
+                      child: Text(
+                        DateFormat('MMM d, h:mm a').format(_selectedDate),
                       ),
                     ),
-                    Expanded(
-                      child: RadioListTile<String>(
-                        title: const Text('Selected'),
-                        value: 'Selected',
-                        groupValue: _splitMode,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) {
-                          setState(() {
-                            _splitMode = v!;
-                            // Default select all
-                            _selectedMemberIds = members
-                                .map((m) => m.id)
-                                .toSet();
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                if (_splitMode == 'Selected') ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: members.map((m) {
-                        return CheckboxListTile(
-                          title: Text(m.name),
-                          value: _selectedMemberIds.contains(m.id),
-                          onChanged: (checked) {
-                            setState(() {
-                              if (checked == true) {
-                                _selectedMemberIds.add(m.id);
-                              } else {
-                                _selectedMemberIds.remove(m.id);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
                   ),
-                ],
-
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _saveExpense,
-                        child: const Text('Save'),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: 'What was it for?',
+                prefixIcon: Icon(Icons.receipt_long),
+              ),
+              validator: (v) =>
+                  v!.trim().isEmpty ? 'Enter a description' : null,
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _amountController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Amount (₹)',
+                prefixIcon: Icon(Icons.currency_rupee),
+              ),
+              validator: (v) => v!.trim().isEmpty ? 'Enter amount' : null,
+            ),
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<Member>(
+              value: _paidBy,
+              decoration: const InputDecoration(
+                labelText: 'Paid By',
+                prefixIcon: Icon(Icons.person),
+              ),
+              items: members
+                  .map(
+                    (m) => DropdownMenuItem(value: m, child: Text(m.name)),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _paidBy = v),
+            ),
+            const SizedBox(height: 24),
+
+            const Text(
+              'Split among',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text('Everyone'),
+                    value: 'Everyone',
+                    groupValue: _splitMode,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) {
+                      setState(() {
+                        _splitMode = v!;
+                        _selectedMemberIds.clear();
+                      });
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text('Selected'),
+                    value: 'Selected',
+                    groupValue: _splitMode,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) {
+                      setState(() {
+                        _splitMode = v!;
+                        _selectedMemberIds = members.map((m) => m.id).toSet();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            if (_splitMode == 'Selected') ...[
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: members.map((m) {
+                    return CheckboxListTile(
+                      title: Text(m.name),
+                      value: _selectedMemberIds.contains(m.id),
+                      onChanged: (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            _selectedMemberIds.add(m.id);
+                          } else {
+                            _selectedMemberIds.remove(m.id);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+
+            ElevatedButton(
+              onPressed: _saveExpense,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Save'),
+            ),
+          ],
         ),
       ),
     );
